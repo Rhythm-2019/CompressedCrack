@@ -40,4 +40,6 @@ optional arguments:
 
 ## Ref
 * [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html)
-* [Python Multiprocessing: The Complete Guide](]https://superfastpython.com/multiprocessing-in-python/)
+* [Python Multiprocessing: The Complete Guide](https://superfastpython.com/multiprocessing-in-python/)
+* [Python Multiprocessing Pool: The Complete Guide](https://superfastpython.com/multiprocessing-pool-python/)
+* [Multiprocessing Pool Number of Workers in Python](https://superfastpython.com/multiprocessing-pool-num-workers/)

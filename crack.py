@@ -44,12 +44,12 @@ import zipfile
 import rarfile
 import os
 import sys
-from threading import Thread
 import argparse
 from itertools import product
 import time
 import urllib.request
 import shutil
+import multiprocessing
 
 parser = argparse.ArgumentParser(description='CompressedCrack', epilog='Use the -h for help')
 parser.add_argument('-i','--input', help='Insert the file path of compressed file', required=True)
@@ -113,7 +113,7 @@ class CmdAgrs(object):
 
         # Check File Exist
         if not os.path.isfile(self.location):
-            print('No such file or directory: ',args[1])
+            print('No such file or directory: ',self.location)
             parser.exit()
 
         if os.path.splitext(self.location)[1] == ".rar" or os.path.splitext(self.location)[1]==".zip":
@@ -155,17 +155,20 @@ class Handler(object):
                 if is_exe(exe_file):
                     return exe_file
         return None
-
-
+    
     def __init__(self, cmd_args: CmdAgrs) -> None:
         self._start_time = None
         self._cmd_args = cmd_args
-        self.result = False
 
         self._file_crack = zipfile.ZipFile(self.location) if self._cmd_args.type == '.zip' else rarfile.RarFile(self.location)
 
         if self._cmd_args.type == '.rar':
             self._download_unrar()
+        
+        self._init_process_pool()
+        
+    def _init_process_pool(self):
+        self._pool = multiprocessing.Pool(self.__class__.worker_number())
         
 
     def _download_unrar(self) -> None:
@@ -196,7 +199,7 @@ class Handler(object):
             print('Complete')
             print('Time:',time.process_time() - self._start_time,'s')
             print('Password:',password)
-            self.result = True
+            queue.put(password)
         except:
             # Failed
             pass
@@ -223,16 +226,18 @@ class Handler(object):
     def _send_request(self, length: int) -> None:
         # Use porduct to avoid out of memory
         listPass = product(self._cmd_args.character, repeat=length)
-        for Pass in listPass:
-            tryPass = ''.join(Pass)
-            # Multi Thread:
-            # nThread = Thread(target=self.Brute, args=(tryPass, ))
-            # nThread.start()
-            # TODO GPU 加速、多进程
-            # Single Thread: 
-            self._brute(tryPass)
-            if self.result:
-                return
+        # Ref: https://superfastpython.com/multiprocessing-pool-first-result/
+        queue = multiprocessing.SimpleQueue()
+        def init_worker(arg_queue): 
+            global queue
+            queue = arg_queue
+            
+        with multiprocessing.Pool(initializer=init_worker, initargs=(queue, )) as pool:
+            _ = pool.map_async(self._brute, listPass)
+            # get the first result, blocking
+            _, value = queue.get()
+            print('finished! password is $s, use %d seconds' % (value, time.process_time() - self._start_time))
+
 def main():
     args = parser.parse_args()
     handler = Handler(CmdAgrs(args[0], args[1]))
